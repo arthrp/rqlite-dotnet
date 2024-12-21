@@ -55,7 +55,7 @@ public class RqliteClientTests
         _httpClient = new HttpClient() { BaseAddress = new Uri(url) };
         var content =
             new StringContent("[ \"CREATE TABLE foo (id INTEGER NOT NULL PRIMARY KEY, name TEXT, age INTEGER)\" ]", Encoding.UTF8, "application/json");
-        Thread.Sleep(2000); //TODO: Make proper ready check
+        Thread.Sleep(1500); //TODO: Make proper ready check
         var r = await _httpClient.PostAsync("/db/execute?timings", content);
         
         Assert.That(r.IsSuccessStatusCode);
