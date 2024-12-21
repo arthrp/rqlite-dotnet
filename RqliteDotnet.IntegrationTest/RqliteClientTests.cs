@@ -1,4 +1,6 @@
+using System.Net.Http.Json;
 using System.Runtime.InteropServices.JavaScript;
+using System.Text;
 using System.Text.RegularExpressions;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -22,10 +24,15 @@ public class RqliteClientTests
             .Build();
         
         await _container.StartAsync().ConfigureAwait(false);
+    }
+
+    [TearDown]
+    public async Task Teardown()
+    {
         var url = $"http://{_container.Hostname}:{_container.GetMappedPublicPort(Port)}";
         _httpClient = new HttpClient() { BaseAddress = new Uri(url) };
         var content =
-            new StringContent("[ \"CREATE TABLE foo (id INTEGER NOT NULL PRIMARY KEY, name TEXT, age INTEGER)\" ]");
+            new StringContent("[ \"drop table foo\" ]");
         await _httpClient.PostAsync("/db/execute?timings", content);
     }
     
@@ -45,9 +52,18 @@ public class RqliteClientTests
     public async Task RqliteClient_CanGetInsertData()
     {
         var url = $"http://{_container.Hostname}:{_container.GetMappedPublicPort(Port)}";
+        _httpClient = new HttpClient() { BaseAddress = new Uri(url) };
+        var content =
+            new StringContent("[ \"CREATE TABLE foo (id INTEGER NOT NULL PRIMARY KEY, name TEXT, age INTEGER)\" ]", Encoding.UTF8, "application/json");
+        Thread.Sleep(2000); //TODO: Make proper ready check
+        var r = await _httpClient.PostAsync("/db/execute?timings", content);
+        
+        Assert.That(r.IsSuccessStatusCode);
+        
         var client = new RqliteClient(url);
+        
 
-        var result = await client.Execute("insert into foo(name, age) VALUES(\\\"john\\\", 42)");
+        var result = await client.Execute("insert into foo(id, name, age) VALUES(1,\\\"john\\\", 42)");
         Assert.That(result!.Results!.Count, Is.EqualTo(1));
         Assert.That(result!.Results[0].RowsAffected, Is.EqualTo(1));
     }
